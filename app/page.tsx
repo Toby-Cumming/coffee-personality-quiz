@@ -1,65 +1,164 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
+import { questions, coffeeResults, Personality } from "./quizData";
+
+type Screen = "welcome" | "quiz" | "result";
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+  const [screen, setScreen] = useState<Screen>("welcome");
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Personality[]>([]);
+  const [result, setResult] = useState<Personality | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+
+  function startQuiz() {
+    setScreen("quiz");
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setResult(null);
+  }
+
+  function handleAnswer(personality: Personality, answerIndex: number) {
+    setSelectedAnswer(answerIndex);
+
+    setTimeout(() => {
+      const newAnswers = [...answers, personality];
+      setAnswers(newAnswers);
+      setSelectedAnswer(null);
+
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+      } else {
+        const winner = calculateResult(newAnswers);
+        setResult(winner);
+        setScreen("result");
+      }
+    }, 400);
+  }
+
+  function calculateResult(allAnswers: Personality[]): Personality {
+    const counts: Partial<Record<Personality, number>> = {};
+    const firstSeen: Partial<Record<Personality, number>> = {};
+
+    allAnswers.forEach((p, index) => {
+      counts[p] = (counts[p] || 0) + 1;
+      if (firstSeen[p] === undefined) {
+        firstSeen[p] = index;
+      }
+    });
+
+    let maxCount = 0;
+    let winner: Personality = allAnswers[0];
+
+    for (const [personality, count] of Object.entries(counts) as [Personality, number][]) {
+      if (count > maxCount || (count === maxCount && (firstSeen[personality]! < firstSeen[winner]!))) {
+        maxCount = count;
+        winner = personality;
+      }
+    }
+
+    return winner;
+  }
+
+  if (screen === "welcome") {
+    return (
+      <div className="quiz-container">
+        <div className="welcome-card">
+          <div className="welcome-emoji">☕</div>
+          <h1 className="welcome-title">Basecamp Coffee</h1>
+          <h2 className="welcome-subtitle">Personality Quiz</h2>
+          <p className="welcome-description">
+            Discover your coffee personality and find the perfect brew that matches who you are.
           </p>
+          <p className="welcome-meta">7 questions &middot; 2 minutes</p>
+          <button className="start-button" onClick={startQuiz}>
+            Find My Coffee ☕
+          </button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      </div>
+    );
+  }
+
+  if (screen === "quiz") {
+    const question = questions[currentQuestion];
+
+    return (
+      <div className="quiz-container">
+        <div className="quiz-card">
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+
+          <div className="progress-dots">
+            {questions.map((_, i) => (
+              <div
+                key={i}
+                className={`dot ${i < currentQuestion ? "dot-done" : ""} ${i === currentQuestion ? "dot-active" : ""}`}
+              />
+            ))}
+          </div>
+
+          <p className="question-count">
+            Question {currentQuestion + 1} of {questions.length}
+          </p>
+          <h2 className="question-text">{question.question}</h2>
+
+          <div className="answers-list">
+            {question.answers.map((answer, i) => (
+              <button
+                key={i}
+                className={`answer-card ${selectedAnswer === i ? "answer-selected" : ""}`}
+                onClick={() => handleAnswer(answer.personality, i)}
+                disabled={selectedAnswer !== null}
+              >
+                <span className="answer-emoji">{answer.emoji}</span>
+                <span className="answer-text">{answer.text}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    );
+  }
+
+  if (screen === "result" && result) {
+    const coffeeMatch = coffeeResults[result];
+
+    return (
+      <div className="quiz-container">
+        <div className="result-card">
+          <p className="result-label">Your Coffee Personality</p>
+          <h1 className="result-personality">{coffeeMatch.personality}</h1>
+          <p className="result-tagline">&ldquo;{coffeeMatch.tagline}&rdquo;</p>
+
+          <div className="result-image-wrapper">
+            <Image
+              src={coffeeMatch.image}
+              alt={coffeeMatch.coffee}
+              width={400}
+              height={300}
+              className="result-image"
+            />
+          </div>
+
+          <div className="result-coffee-section">
+            <p className="result-coffee-label">Your Perfect Brew</p>
+            <h2 className="result-coffee-name">{coffeeMatch.coffee}</h2>
+            <p className="result-description">{coffeeMatch.description}</p>
+          </div>
+
+          <button className="start-button" onClick={startQuiz}>
+            Take It Again 🔄
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
