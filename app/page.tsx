@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import confetti from "canvas-confetti";
 import { questions, coffeeResults, Personality } from "./quizData";
 
 type Screen = "welcome" | "quiz" | "result";
@@ -12,6 +13,35 @@ export default function Home() {
   const [answers, setAnswers] = useState<Personality[]>([]);
   const [result, setResult] = useState<Personality | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (screen === "result") {
+      const duration = 2000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.6 },
+          colors: ["#FFB3BA", "#BAFFC9", "#BAE1FF", "#FFFFBA", "#E8BAFF"],
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.6 },
+          colors: ["#FFB3BA", "#BAFFC9", "#BAE1FF", "#FFFFBA", "#E8BAFF"],
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+  }, [screen]);
 
   function startQuiz() {
     setScreen("quiz");
